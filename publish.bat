@@ -3,7 +3,7 @@ REM The Parlor - commit and push to GitHub (GitHub Pages serves main /).
 REM Usage: publish.bat "optional commit message"
 setlocal
 cd /d "%~dp0"
-set REPO=https://github.com/shamoug/the-parlor.git
+set REPO=https://github.com/shamoug/parlor.git
 
 if not exist ".git" (
   git init -b main
@@ -32,6 +32,6 @@ if errorlevel 1 (
   exit /b 1
 )
 echo.
-echo Published! Live site: https://shamoug.github.io/the-parlor/
+echo Published! Live site: https://shamoug.github.io/parlor/
 echo (GitHub Pages can take a minute to refresh.)
 pause

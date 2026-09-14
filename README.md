@@ -37,7 +37,7 @@ Every game is built on an evidence-based therapy technique. Every game makes the
 
 ## Play it
 
-**Online:** https://shamoug.github.io/the-parlor/
+**Online:** https://shamoug.github.io/parlor/
 
 **On your computer:**
 
