@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="sunny">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>The Parlor · Word games for speech &amp; language therapy</title>
+    <meta name="description" content="The Parlor: eight joyful, evidence-informed word games for people with speech and language difficulties (aphasia, apraxia, articulation, stuttering, dysarthria) and the speech therapists who help them." />
+    <meta name="theme-color" content="#ff7a59" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="The Parlor" />
+    <meta property="og:title" content="The Parlor" />
+    <meta property="og:description" content="Eight joyful word games that help every voice grow stronger." />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/icon.svg" />
+    <!-- Fonts are optional: everything falls back to system fonts offline. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles/parlor.css" />
+  </head>
+  <body>
+    <div id="app" aria-live="polite"></div>
+    <noscript><p class="noscript">The Parlor needs JavaScript turned on to play.</p></noscript>
+
+    <!-- Plain scripts, no build step: works on GitHub Pages or straight from disk. -->
+    <script src="src/logic.js" defer></script>
+    <script src="data/words.js" defer></script>
+    <script src="src/core.js" defer></script>
+    <script src="src/sayit.js" defer></script>
+    <script src="src/shell.js" defer></script>
+    <script src="src/games/wordlock.js" defer></script>
+    <script src="src/games/garden.js" defer></script>
+    <script src="src/games/detective.js" defer></script>
+    <script src="src/games/pairup.js" defer></script>
+    <script src="src/games/beats.js" defer></script>
+    <script src="src/games/finishline.js" defer></script>
+    <script src="src/games/hundred.js" defer></script>
+    <script src="src/games/sailing.js" defer></script>
+    <script defer>
+      document.addEventListener("DOMContentLoaded", function () { window.P.boot(); });
+    </script>
+  </body>
+</html>

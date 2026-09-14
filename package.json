@@ -1,0 +1,14 @@
+{
+  "name": "the-parlor",
+  "version": "1.0.0",
+  "description": "Eight joyful, evidence-informed word games for speech and language therapy.",
+  "//": "OPTIONAL and dev-only. The app is static files with zero dependencies; npm is not needed to play.",
+  "private": true,
+  "scripts": {
+    "start": "python -m http.server 8120",
+    "test": "node tests/run.js"
+  },
+  "keywords": ["speech therapy", "aphasia", "apraxia", "articulation", "stuttering", "word games", "slp", "accessibility"],
+  "author": "Aladdin Shamoug",
+  "license": "MIT"
+}
