@@ -69,9 +69,11 @@
     const c = el("canvas", "env-graph");
     c.width = 640; c.height = 120;
     c.setAttribute("aria-hidden", "true");
+    c.hidden = true; // shown once the microphone starts drawing
     return c;
   }
   function draw(canvas, env, maxFrames, line) {
+    canvas.hidden = false;
     const g = canvas.getContext("2d"), W = canvas.width, H = canvas.height;
     g.clearRect(0, 0, W, H);
     const max = Math.max(0.05, ...env, line || 0) * 1.15;

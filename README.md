@@ -33,7 +33,10 @@ Every game is built on an evidence-based therapy technique. Every game makes the
 - **Progress for clinicians.** Per-game independence %, cue use, a 14-day chart, sound-by-sound accuracy, recent attempts, **CSV export**, JSON backup and restore, and print.
 - **Home practice plans.** Therapists pick games, a goal and a support style, then share a link. The link contains no personal data.
 - **Accessible.** 56–74 px touch targets, a picture with every word, audio on every word, three themes (☀️ Sunny, 🫖 Parlor for adults, 🌙 Night), high contrast, big text, wider letter spacing, reduced motion, and keyboard support.
-- **Private.** No accounts, no tracking, no build step. Progress stays in the browser. It works offline as an installable web app.
+- **Simple sign-in.** Players type their name and pick a buddy once. A first-party cookie plus browser storage recognizes them next visit ("Welcome back, Sam!"). Several players can share one device with **Switch player**, and each keeps separate progress.
+- **Start over any time.** Settings → **Erase my progress** clears attempts, scores, streak and plans, and keeps the name and settings.
+- **Private.** No passwords, no server, no tracking, no build step. Names and progress stay in the browser. It works offline as an installable web app.
+- **Phone-first layout.** Checked at 320–375 px: one-row game bar, a keyboard pinned to the bottom in Word Lock, and the Play button before the instructions.
 
 ## Play it
 

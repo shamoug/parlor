@@ -1,7 +1,7 @@
 /* The Parlor · service worker
  * Network-first for pages (always fresh when online), cache fallback offline.
  * Bump VERSION when publishing changes to static files. */
-const VERSION = "parlor-v1";
+const VERSION = "parlor-v2";
 const CORE = [
   "./", "index.html", "manifest.webmanifest", "assets/icon.svg", "styles/parlor.css",
   "src/logic.js", "data/words.js", "src/core.js", "src/sayit.js", "src/shell.js",

@@ -103,7 +103,7 @@
       const kb = P.$(".wl-kb", wrap);
       KEYS.forEach((line, li) => {
         const r = el("div", "kb-row");
-        if (li === 2) r.appendChild(key("enter", "Check ✓", "wide enter"));
+        if (li === 2) r.appendChild(key("enter", "Check", "wide enter"));
         line.split("").forEach((c) => r.appendChild(key(c, c.toUpperCase())));
         if (li === 2) r.appendChild(key("back", "⌫", "wide"));
         kb.appendChild(r);

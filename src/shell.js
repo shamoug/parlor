@@ -29,6 +29,8 @@
     const h = location.hash.replace(/^#\/?/, "");
     const [page, arg, arg2] = h.split("/");
     document.body.dataset.page = page || "home";
+    // Everyone signs in with a name first. The hash (e.g. a plan link) is kept for after.
+    if (!P.Players.current()) { document.body.dataset.page = "welcome"; return welcomePage(); }
     if (page === "play" && gameById(arg)) return intro(gameById(arg));
     if (page === "progress") return progressPage();
     if (page === "settings") return settingsPage();
@@ -42,6 +44,7 @@
     const n = el("header", "topnav");
     n.innerHTML = `
       <a class="brand" href="#/" aria-label="The Parlor home"><span class="brand-mark" aria-hidden="true">🦜</span><span class="brand-name">The Parlor</span></a>
+      ${P.Players.current() ? `<a class="player-chip" href="#/settings" title="Player settings"><span class="pc-av" aria-hidden="true">${P.Players.current().avatar}</span><span class="pc-name">${esc(P.Players.current().name)}</span></a>` : ""}
       <nav class="navlinks" aria-label="Main">
         <a href="#/" class="${active === "home" ? "on" : ""}"><span aria-hidden="true">🎲</span> Games</a>
         <a href="#/progress" class="${active === "progress" ? "on" : ""}"><span aria-hidden="true">📈</span> Progress</a>
@@ -69,7 +72,7 @@
       <div class="hero-tiles" aria-hidden="true">${"PARLOR".split("").map((c, i) => `<span class="htile" style="--i:${i}">${c}</span>`).join("")}</div>
       <h1 class="hero-title">The Parlor</h1>
       <p class="hero-sub">Eight joyful word games that help every voice grow stronger.</p>
-      <p class="hero-hello">${hello}${name ? ", <b>" + esc(name) + "</b>" : ""}! <span aria-hidden="true">👋</span></p>
+      <p class="hero-hello">${P.Players.returning ? "Welcome back" : hello}${name ? ", <b>" + esc(name) + "</b>" : ""}! <span aria-hidden="true">${P.Players.current() ? P.Players.current().avatar : "👋"}</span></p>
       <div class="stats">
         <div class="stat ring-stat" title="Practice goal for today">
           <svg viewBox="0 0 44 44" class="ring" aria-hidden="true"><circle cx="22" cy="22" r="18" class="ring-bg"/><circle cx="22" cy="22" r="18" class="ring-fg" style="stroke-dasharray:${(pct * 113.1).toFixed(1)} 113.1"/></svg>
@@ -123,10 +126,77 @@
       <p class="fine">Private by design: everything stays on this device. The Parlor supports therapy. It does not replace a speech-language pathologist.</p>`;
     root.appendChild(foot);
     app().replaceChildren(root);
-    if (!P.store("welcomed")) {
-      P.store("welcomed", true);
-      setTimeout(() => P.polly("Welcome to The Parlor! Pick any game to begin.", "happy"), 900);
+    if (P.Players.returning) {
+      P.Players.returning = false;
+      setTimeout(() => P.polly(`Welcome back, ${name}! Ready to play? 🦜`, "happy"), 900);
+    } else if (sessionStorage.getItem("parlor_new")) {
+      try { sessionStorage.removeItem("parlor_new"); } catch (e) {}
+      setTimeout(() => P.polly(`Hi ${name}! Pick any game to begin.`, "happy"), 900);
     }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Welcome / sign-up: type a name once, get recognised next time
+   * ------------------------------------------------------------------ */
+  const AVATARS = ["🦜", "🦊", "🐼", "🐯", "🐸", "🦄", "🐙", "🐢", "🦉", "🐝", "🌻", "🚀", "⚽", "🎸", "🌈", "⭐"];
+  function welcomePage() {
+    const root = el("div", "page welcome");
+    const players = P.Players.list().sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+    let avatar = P.pick(AVATARS);
+    const card = el("section", "welcome-card");
+    card.innerHTML = `
+      <div class="hero-tiles" aria-hidden="true">${"PARLOR".split("").map((c, i) => `<span class="htile" style="--i:${i}">${c}</span>`).join("")}</div>
+      <h1 class="hero-title">The Parlor</h1>
+      <p class="hero-sub">Eight joyful word games that help every voice grow stronger.</p>
+      ${players.length ? `<h2 class="wc-h">Who's playing?</h2><div class="who-list"></div><div class="wc-or"><span>or join as someone new</span></div>` : `<h2 class="wc-h">Let's get to know you!</h2>`}
+      <form class="wc-form" autocomplete="off">
+        <label class="wc-label" for="wc-name">What's your name?</label>
+        <input id="wc-name" class="wc-input" maxlength="30" placeholder="Type your name" required enterkeyhint="go" />
+        <div class="wc-label">Pick a buddy</div>
+        <div class="avatar-pick" role="radiogroup" aria-label="Buddy">${AVATARS.map((a) => `<button type="button" role="radio" class="av ${a === avatar ? "on" : ""}" aria-checked="${a === avatar}" data-a="${a}">${a}</button>`).join("")}</div>
+        <button type="submit" class="btn btn-primary btn-xl wc-go"><span class="bi">🎉</span><span>Let's go!</span></button>
+      </form>
+      <p class="fine">Your name stays on this device. A small cookie remembers you next time. No email, no password, no tracking.</p>`;
+    root.appendChild(card);
+    app().replaceChildren(root);
+
+    const who = P.$(".who-list", card);
+    players.forEach((p) => {
+      const b = button(`<span class="who-av" aria-hidden="true">${p.avatar}</span><span>${esc(p.name)}</span>`, "who", () => { P.Players.signIn(p.id); location.reload(); });
+      who.appendChild(b);
+    });
+    P.$$(".av", card).forEach((b) => b.addEventListener("click", () => {
+      avatar = b.dataset.a;
+      P.$$(".av", card).forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", x === b); });
+      P.Sound.play("pop");
+    }));
+    const input = P.$("#wc-name", card);
+    P.$(".wc-form", card).addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = input.value.trim();
+      if (!name) { input.focus(); P.toast("Please type your name"); return; }
+      P.Sound.play("great");
+      P.Players.create(name, avatar);
+      try { sessionStorage.setItem("parlor_new", "1"); } catch (err) {}
+      location.reload();
+    });
+    if (!players.length) setTimeout(() => input.focus({ preventScroll: true }), 400);
+  }
+
+  /* Erase the current player's progress after a clear confirmation. */
+  function confirmErase() {
+    const box = el("div", "", `<div class="sum-stars" aria-hidden="true">🧹</div><h2>Erase your progress and start over?</h2><p>This deletes every saved attempt, best score, streak and practice plan for <b>${esc(S.data.name)}</b> on this device. Your name and settings stay. This can't be undone. You can make a backup on the Progress page first.</p>`);
+    const acts = el("div", "sum-actions");
+    acts.appendChild(button("Keep my progress", "btn-primary", () => P.closeOverlay()));
+    acts.appendChild(button("🗑️ Yes, erase it", "btn-ghost danger", () => {
+      P.Players.eraseProgress();
+      P.Log.clear();
+      P.closeOverlay();
+      P.toast("Progress erased. Fresh start! 🌱", "good");
+      setTimeout(() => { location.hash = "#/"; location.reload(); }, 900);
+    }));
+    box.appendChild(acts);
+    P.overlay(box);
   }
 
   /* ------------------------------------------------------------------ *
@@ -425,14 +495,7 @@
     });
     row.append(imp, file);
     row.appendChild(button("🖨️ Print", "btn-ghost", () => window.print()));
-    row.appendChild(button("🗑️ Clear all", "btn-ghost danger", () => {
-      const box = el("div", "", "<h2>Clear all progress?</h2><p>This removes every saved attempt on this device. Consider exporting a backup first.</p>");
-      const acts = el("div", "sum-actions");
-      acts.appendChild(button("Keep my data", "btn-primary", () => P.closeOverlay()));
-      acts.appendChild(button("Yes, clear it", "btn-ghost danger", () => { P.Log.clear(); P.store("bests", {}); P.closeOverlay(); route(); }));
-      box.appendChild(acts);
-      P.overlay(box);
-    }));
+    row.appendChild(button("🗑️ Erase progress", "btn-ghost danger", confirmErase));
     root.appendChild(tools);
 
     root.appendChild(planBuilder());
@@ -526,7 +589,16 @@
       <h1>⚙️ Settings</h1>
       <div class="set-group">
         <h2>👤 Player</h2>
-        <label class="field">Name (optional, stays on this device)<input id="st-name" maxlength="30" value="${esc(d.name)}" placeholder="e.g. Sam"></label>
+        <label class="field">Your name<input id="st-name" maxlength="30" value="${esc(d.name)}" placeholder="e.g. Sam"></label>
+        <div class="wc-label">Your buddy</div>
+        <div class="avatar-pick small" role="radiogroup" aria-label="Buddy">${AVATARS.map((a) => `<button type="button" role="radio" class="av ${P.Players.current() && P.Players.current().avatar === a ? "on" : ""}" data-a="${a}">${a}</button>`).join("")}</div>
+        <div class="tool-row">
+          <button type="button" class="btn btn-ghost" id="st-switch">👥 Switch player</button>
+        </div>
+        <div class="danger-zone">
+          <div><b>🧹 Start over</b><small>Erase all your attempts, scores, streak and plans. Your name and settings stay.</small></div>
+          <button type="button" class="btn btn-ghost danger" id="st-erase">🗑️ Erase my progress</button>
+        </div>
       </div>
       <div class="set-group">
         <h2>🎨 Look</h2>
@@ -571,7 +643,21 @@
     app().replaceChildren(root);
 
     const $ = (s) => P.$(s, sec);
-    $("#st-name").addEventListener("input", (e) => S.set("name", e.target.value.trim()));
+    $("#st-name").addEventListener("change", (e) => {
+      const v = e.target.value.trim();
+      if (!v) { e.target.value = S.data.name; P.toast("Your name can't be empty"); return; }
+      S.set("name", v); P.Players.update({ name: v });
+      P.toast("Name saved ✓", "good");
+      const chip = P.$(".pc-name"); if (chip) chip.textContent = v;
+    });
+    P.$$(".avatar-pick .av", sec).forEach((b) => b.addEventListener("click", () => {
+      P.Players.update({ avatar: b.dataset.a });
+      P.$$(".avatar-pick .av", sec).forEach((x) => x.classList.toggle("on", x === b));
+      const chip = P.$(".pc-av"); if (chip) chip.textContent = b.dataset.a;
+      P.Sound.play("pop");
+    }));
+    $("#st-switch").addEventListener("click", () => { P.Players.signOut(); location.hash = "#/"; location.reload(); });
+    $("#st-erase").addEventListener("click", confirmErase);
     P.$$(".theme-opt", sec).forEach((b) => b.addEventListener("click", () => { S.set("theme", b.dataset.v); P.Sound.play("pop"); settingsPage(); }));
     P.$$(".tgl", sec).forEach((b) => b.addEventListener("click", () => {
       const on = !S.data[b.dataset.k];
@@ -677,7 +763,7 @@
       </ul>
 
       <h2>Privacy</h2>
-      <p>No accounts, no ads, no tracking. Progress lives in this browser's storage. In Chrome and Edge, speech recognition may send audio to the browser maker's speech service. Turn the microphone off in Settings to avoid this. The loudness meters in Beat Keeper and Smooth Sailing never send audio anywhere.</p>
+      <p>No passwords, no ads, no tracking. Players just type their name. It is saved in this browser along with their progress, and a small first-party cookie recognizes them next visit. Nothing is sent to a server. Several players can share one device (Settings → Switch player), and anyone can erase their progress in Settings. In Chrome and Edge, speech recognition may send audio to the browser maker's speech service. Turn the microphone off in Settings to avoid this. The loudness meters in Beat Keeper and Smooth Sailing never send audio anywhere.</p>
 
       <h2>Where the ideas come from</h2>
       <p class="small">Semantic Feature Analysis (Boyle), Phonological Components Analysis (Leonard et al., 2008), cueing hierarchies (Linebaugh), errorless learning, minimal/maximal/multiple oppositions and the Cycles approach (Hodson), Sound Production Treatment and principles of motor learning, Dynamic Temporal and Tactile Cueing (Strand), Melodic Intonation Therapy, diadochokinetic rates, LSVT LOUD, fluency shaping (Camperdown Program), Verb Network Strengthening Treatment (Edmonds), the Early/Middle/Late 8 sounds (Shriberg), and RELEASE aphasia dosage findings (2022). The full notes with links are in <code>docs/RESEARCH.md</code> in the project.</p>`;

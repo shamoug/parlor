@@ -43,14 +43,97 @@
    * Storage (never throws: private windows / blocked storage still play)
    * ------------------------------------------------------------------ */
   const PREFIX = "parlor_";
-  P.store = function (key, val) {
+  function rawGet(key) {
+    try { return JSON.parse(localStorage.getItem(PREFIX + key) || "null"); } catch (e) { return null; }
+  }
+  function rawSet(key, val) {
     try {
-      if (val === undefined) return JSON.parse(localStorage.getItem(PREFIX + key) || "null");
-      localStorage.setItem(PREFIX + key, JSON.stringify(val));
-      return val;
-    } catch (e) {
-      return val === undefined ? null : val;
-    }
+      if (val === null) localStorage.removeItem(PREFIX + key);
+      else localStorage.setItem(PREFIX + key, JSON.stringify(val));
+    } catch (e) { /* storage blocked: play continues without saving */ }
+    return val;
+  }
+  function rawKeys() {
+    try { return Object.keys(localStorage).filter((k) => k.startsWith(PREFIX)).map((k) => k.slice(PREFIX.length)); } catch (e) { return []; }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Players — a light "sign up": the player types a name once and is
+   * recognised on return by a first-party cookie plus browser storage.
+   * Nothing leaves the device. Each player's progress is kept separately,
+   * so a shared clinic tablet can hold several players.
+   * ------------------------------------------------------------------ */
+  const COOKIE = "parlor_player";
+  P.cookie = {
+    get(name) {
+      const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+      return m ? decodeURIComponent(m[1]) : null;
+    },
+    set(name, value, days) {
+      const exp = new Date(Date.now() + (days || 400) * 864e5).toUTCString();
+      document.cookie = `${name}=${encodeURIComponent(value)}; expires=${exp}; path=/; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+    },
+    clear(name) { document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`; },
+  };
+  const PLAYER_KEYS = /^(settings|trials|bests|plan|cfg_.*)$/;
+  const Players = (P.Players = {
+    list: () => rawGet("players") || [],
+    current: () => Players.list().find((p) => p.id === Players.currentId) || null,
+    returning: false,
+    create(name, avatar) {
+      const list = Players.list();
+      const id = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      list.push({ id, name: String(name).trim().slice(0, 30), avatar: avatar || "🦜", created: Date.now(), lastSeen: Date.now() });
+      rawSet("players", list);
+      // First player on this device inherits any progress saved before sign-up existed.
+      if (list.length === 1) {
+        rawKeys().filter((k) => PLAYER_KEYS.test(k)).forEach((k) => { rawSet(id + "_" + k, rawGet(k)); rawSet(k, null); });
+        rawSet("welcomed", null); // replaced by sign-up
+      }
+      Players.signIn(id);
+      return id;
+    },
+    update(fields) {
+      const list = Players.list();
+      const p = list.find((x) => x.id === Players.currentId);
+      if (!p) return;
+      Object.assign(p, fields);
+      rawSet("players", list);
+    },
+    signIn(id) {
+      rawSet("current", id);
+      P.cookie.set(COOKIE, id);
+      Players.currentId = id;
+    },
+    signOut() {
+      rawSet("current", null);
+      P.cookie.clear(COOKIE);
+      Players.currentId = null;
+    },
+    /* Erase this player's progress (attempts, bests, plans, game choices). Keeps name and settings. */
+    eraseProgress() {
+      const pre = Players.currentId + "_";
+      rawKeys().filter((k) => k.startsWith(pre) && k !== pre + "settings").forEach((k) => rawSet(k, null));
+    },
+  });
+  (function resolvePlayer() {
+    const ids = Players.list().map((p) => p.id);
+    let id = P.cookie.get(COOKIE);
+    if (!ids.includes(id)) id = rawGet("current");
+    if (!ids.includes(id)) return;
+    Players.currentId = id;
+    const p = Players.current();
+    Players.returning = Date.now() - (p.lastSeen || 0) > 30 * 60 * 1000;
+    Players.update({ lastSeen: Date.now() });
+    P.cookie.set(COOKIE, id); // refresh expiry
+    rawSet("current", id);
+  })();
+
+  /* Per-player storage. Before sign-up it falls back to device-wide keys. */
+  P.store = function (key, val) {
+    const k = Players.currentId && PLAYER_KEYS.test(key) ? Players.currentId + "_" + key : key;
+    if (val === undefined) return rawGet(k);
+    return rawSet(k, val);
   };
 
   /* ------------------------------------------------------------------ *
@@ -75,9 +158,10 @@
     polly: true,
   };
   const S = (P.Settings = { data: Object.assign({}, DEFAULTS, P.store("settings") || {}) });
+  if (Players.current()) S.data.name = Players.current().name;
   S.get = (k) => S.data[k];
   S.set = function (k, v) { S.data[k] = v; P.store("settings", S.data); S.apply(); };
-  S.reset = function () { S.data = Object.assign({}, DEFAULTS); P.store("settings", S.data); S.apply(); };
+  S.reset = function () { S.data = Object.assign({}, DEFAULTS, { name: S.data.name }); P.store("settings", S.data); S.apply(); };
   S.apply = function () {
     const d = S.data, html = document.documentElement;
     html.dataset.theme = d.theme;
